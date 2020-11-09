@@ -1,0 +1,51 @@
+---
+title: "Pansharpening satellite images from R"
+author: "Manuel Montesino-SanMartin"
+date: "09/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Pansharpening
+
+Sometimes, I feel overwhelmed by the amount of techniques devoted to 
+processing satellite imagery. This tutorial is an attempt to summarize
+and orgnize these techniques from an `R`-user perspective. This means
+that the tutorial explains methods  available in `R` (either native or
+available through third-party software). Hence, the tutorial is not
+a comprehensive review of all the techniques, but only those existing
+
+Here we address \textbf{pansharpening} methods, which is a group of
+techniques intended to increase the spatial and spectral resolution of
+satellite  images by fusing images with complementary features. The
+tutorial gives:
+
+ - An introduction to the basics  of pansharpening in Section 1.
+ - An overview of methods in Section 2.
+ - Explanations about the methods in Section 3, with:
+   - Brief theoretical explanations of each method. 
+   - Simple and reproducible examples. 
+
+## Basics
+
+Pansharpening methods generally fuse a panchromatic image with a multi-
+or hyper-spectral image:
+
+  - A \textbf{panchromatic} (PAN) image is an image with a high spatial
+  detail. Instruments retrieving PAN images capture broader bandwidths,
+  which increase the signal-to-noise ratio. However, this hampers the
+  differentiation of intensities at different wavelengths. Hence, they 
+  are generally presented as gray-scale images.
+
+  - \textbf{Multi- and hyper-spectral} images carry information from
+  narrower wavelengths. The difference between multi and hyper-spectral
+  depends on the number of bands (tens vs. hundreds) and how narrow the
+  bandwidths are. Because their signal-to-noise ratio is lower, spectral
+  resolution comes at the cost of spatial resolution.
+
+## Overview
+
+## Methods
