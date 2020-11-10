@@ -13,12 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Sometimes, I feel overwhelmed by the amount of techniques devoted to 
 processing satellite imagery. This tutorial is an attempt to summarize
-and orgnize these techniques from an `R`-user perspective. This means
+and organize these techniques from an `R`-user perspective. This means
 that the tutorial explains methods  available in `R` (either native or
 available through third-party software). Hence, the tutorial is not
 a comprehensive review of all the techniques, but only those existing
 
-Here we address \textbf{pansharpening} methods, which is a group of
+Here we address __pansharpening__ methods, which is a group of
 techniques intended to increase the spatial and spectral resolution of
 satellite  images by fusing images with complementary features. The
 tutorial gives:
@@ -34,13 +34,13 @@ tutorial gives:
 Pansharpening methods generally fuse a panchromatic image with a multi-
 or hyper-spectral image:
 
-  - A \textbf{panchromatic} (PAN) image is an image with a high spatial
+  - A __panchromatic__ (_PAN_) image is an image with a high spatial
   detail. Instruments retrieving PAN images capture broader bandwidths,
-  which increase the signal-to-noise ratio. However, this hampers the
-  differentiation of intensities at different wavelengths. Hence, they 
+  which increase the signal-to-noise ratio. However, this avoids
+  capturing the intensities at different wavelengths. Hence, they 
   are generally presented as gray-scale images.
 
-  - \textbf{Multi- and hyper-spectral} images carry information from
+  - __Multi- and hyper-spectral__ (_MS_) images carry information from
   narrower wavelengths. The difference between multi and hyper-spectral
   depends on the number of bands (tens vs. hundreds) and how narrow the
   bandwidths are. Because their signal-to-noise ratio is lower, spectral
@@ -48,4 +48,40 @@ or hyper-spectral image:
 
 ## Overview
 
+Generally, pansharpening methods are classified in two categories (Alparone
+et al., 2015):
+
+  - _Component Substitution_ (_CS_) methods: These methods project
+  the multi-spectral image into a new vector space. The new vector space
+  disentangles the spatial structure from the spectral information. The
+  component representing the spatial structure is replaced by the _PAN_
+  image. Finally, the image is projected back to the original vector space.
+  Among the _CS_ techniques, some of the most popular are the
+  _Intensity-Hue-Saturation_ method (_IHS_), the  _Principal Component Analysis_
+  (_PCA_), and the _Gram-Schmidt_ spectral sharpening.
+
+  - Multi-Resolution Analyses (_MRA_): This group of methods extract the 
+  spatial structure from the _PAN_ image by multi-resolution decomposition.
+  These spatial details are then _injected_ into an interpolated version of 
+  the multi-spectral image. The _MRA_ methods are named after the techniques
+  being used for the decomposition. The most popular are the (decimated)
+  _Discrete Wavelet Transform_ (_DWT_), _Undecimated Wavelet Transform_
+  (_UDWT_), _A-Trous Wavelet Transform_ (_ATW_), and the 
+  _Laplacian Pyramid_ (_LP_).
+
+A third group, the _hybrid_ methods, combine _CS_ and _MRA_. `R` packages and
+functionalities mainly cover _CS_.  These methods provide a high geometrical
+quality, are simple, and computationally fast. However, they do not consider
+potential dissimilarities between the _PAN_ and the _MS_ image, which can
+lead to spectral distortions and therefore must be used with care for the
+analysis of spectral signatures (Alparone et al., 2015). 
+
 ## Methods
+
+### The Intensity-Hue-Saturation method (IHS)
+
+### The Principal Component Analysis
+
+## Refrences
+
+Alparone, L., Aiazzi, B., Baronti, S., & Garzelli, A. (2015). __Pansharpening of Multispectral Images__,  in __Remote Sensing Image Fusion__. Crc Press.
