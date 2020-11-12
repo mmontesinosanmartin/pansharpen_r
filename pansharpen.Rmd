@@ -14,29 +14,38 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Tutorial: Pansharpening
 
+The amount of techniques to process satellite imagery can be
+overwhelming. This tutorial is an attempt to summarize and organize some
+of these techniques. Here, we focus on techniques available in `R`
+(either native or through third-party software, such as
+[SAGA](http://www.saga-gis.org/en/index.html) or
+[GRASS](https://grass.osgeo.org/)). Other methods are also described,
+just enough to provide further context and be aware about the pros and
+cons of using `R` as a tool to pre-process satellite images.
+
 ## Intro
 
-Sometimes, It is overwhelming the amount of techniques devoted to
-processing satellite imagery. This tutorial attempts to summarize and
-organize some of these techniques. The tutorial covers those methods
-available in `R` only (either native or through third-party software,
-such as [SAGA](http://www.saga-gis.org/en/index.html) or
-[GRASS](https://grass.osgeo.org/)). Other methods might be superficially
-described in order to give further context about the pros and cons of
-using `R` to pre-process satellite images.
-
-Here we address **pansharpening** , a group of techniques intended to
-increase the spatial and spectral resolution of satellite images by
+This topic of this tutorial is **pansharpening** , a group of techniques
+to increase the spatial and spectral resolution of satellite images by
 fusing images with complementary features. The tutorial gives:
 
--   A brief introduction to pansharpening basics (Section 1).
+-   An introduction to the basics of pansharpening (Section 1)
 
--   An overview of methods (Section 2).
+-   An overview of methods (Section 2)
 
--   Detailed descriptions of some methods (Section 3), including:
+-   Descriptions of some methods (Section 3), including:
 
-    -   Brief theoretical explanations of each method.
-    -   Simple and reproducible examples.
+    -   Brief theoretical explanations
+    -   Simple and reproducible examples
+
+Minimum requirement to follow this tutorial: install [`RStoolbox`
+](http://bleutner.github.io/RStoolbox/)(Leutner et al., 2019) to
+pansharpen and `tmap` (Tennekes, 2018) to visualize the results:
+
+```{r, eval=FALSE}
+install.packages("RStoolbox")
+install.packages("tmap")
+```
 
 ## The basics
 
@@ -44,13 +53,14 @@ Pansharpening methods generally fuse a **panchromatic** and a
 [**multi-spectral**](https://en.wikipedia.org/wiki/Multispectral_image)
 (or hyper-spectral) image:
 
--   A **panchromatic** (*PAN*) image is an image with high spatial
+-   A **panchromatic** (*PAN*) image is an image with greater spatial
     details (*but little spectral information*). Instruments retrieving
-    PAN images sense broader bandwidths to increase the signal-to-noise
-    ratio and capture more spatial details. This also means that
-    panchromatic images have a single band and they do not distinguish
-    intensities from discrete wavelengths. In this tutorial, we use the
-    *PAN* image under the path `./Data/pan` .
+    PAN images sense broader bandwidths (visible and to some degree
+    near-infrared) to increase the signal-to-noise ratio and capture
+    finer spatial details. This also means that panchromatic images have
+    a single band and they do not distinguish intensities from discrete
+    wavelengths. In this tutorial, we use the *PAN* image under the path
+    `./Data/pan` .
 
     ```{r, eval=FALSE}
     library(raster)
@@ -102,21 +112,46 @@ al., 2015):
     Transform* (*ATW*), and the *Laplacian Pyramid* (*LP*).
 
 A third group combines both *CS* and *MRA*, and hence they are called
-*hybrid*. Current software in `R` covers some *CS methods*. They provide
+*hybrid*. Current software in `R` covers some *CS* methods. They provide
 a high geometrical quality and they are simple and computationally fast.
-However, they do not consider potential dissimilarities between the
-*PAN* and the *MS* image, which can lead to spectral distortions. They
-should be used with care for the analysis of spectral signatures
-(Alparone et al., 2015).
+However, they do not consider potential discrepancies between the *PAN*
+and the *MS* image, leading to spectral distortions in some
+circumstances. They should be used with care (or avoided) for the
+analysis of spectral signatures (Alparone et al., 2015; Wegmann et al.,
+2016).
 
 ## Methods
 
+To avoid blurred results, it is a good practice to ensure the proper
+corregistration between *PAN* and *MS*, even when collected from the
+same platform (Wegmann et al., 2016).
+
 ### The Intensity-Hue-Saturation method (IHS)
 
+The classical approach deals only with the Red-Green-Blue spectral bands
+(Wegmann et al., 2016). It preserves the color balance relatively well
+(Wegmann et al., 2016)
+
 ### The Principal Component Analysis
+
+Can lead to severe color distortions (Wegmann et al., 2016) but shows
+good capabilities in reproducing sharp edges and can deal with more than
+three bands (Wegmann et al., 2016).
 
 ## Refrences
 
 Alparone, L., Aiazzi, B., Baronti, S., & Garzelli, A. (2015).
-**Pansharpening of Multispectral Images**, in **Remote Sensing Image
-Fusion**. Crc Press.
+Pansharpening of Multispectral Images, in Remote Sensing Image Fusion.
+*Crc Press*.
+
+Leutner B., Horning N., & Schwalb-Willmann, J. (2019). `RStoolbox`:
+*Tools for Remote Sensing Data Analysis*. R package version 0.2.6.
+<https://CRAN.R-project.org/package=RStoolbox>
+
+Tennekes, M. (2018). `tmap`: Thematic Maps in R. *Journal of Statistical
+Software* **84** (6), 1-39. (URL:
+[https://doi.org/10.18637/jss.v084.i06).](https://doi.org/10.18637/jss.v084.i06).)
+
+Wegmann, M., Leutner, B., & Dech, S. (Eds.). (2016). Remote sensing and
+GIS for ecologists: using open source software. *Pelagic Publishing
+Ltd.*
