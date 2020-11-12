@@ -38,9 +38,10 @@ fusing images with complementary features. The tutorial gives:
     -   Brief theoretical explanations
     -   Simple and reproducible examples
 
-Minimum requirement to follow this tutorial: install [`RStoolbox`
-](http://bleutner.github.io/RStoolbox/)(Leutner et al., 2019) to
-pansharpen and `tmap` (Tennekes, 2018) to visualize the results:
+Minimum requirement to follow this tutorial: install
+[`RStoolbox`](http://bleutner.github.io/RStoolbox/)(Leutner et al.,
+2019) to pansharpen and `tmap` (Tennekes, 2018) to visualize the
+results:
 
 ```{r, eval=FALSE}
 install.packages("RStoolbox")
@@ -60,33 +61,34 @@ Pansharpening methods generally fuse a **panchromatic** and a
     finer spatial details. This also means that panchromatic images have
     a single band and they do not distinguish intensities from discrete
     wavelengths. In this tutorial, we use the *PAN* image under the path
-    `./Data/pan` .
+    `./Data/pan` , with a resolution of $15 \times 15m^2$ resolution.
 
-    ```{r, eval=FALSE}
+    ```{r}
     library(raster)
-    pan.img <- raster("/Data/pan/pan_example.tif")
+    pan.img <- raster("./Data/pan_example.tif")
     pan.img
-    plot(pan.img)
+    plot(pan.img, col = grey.colors(10))
     ```
 
 -   **Multi(hyper)-spectral** (*MS*) images carry information about the
     radiance/reflectance from narrower wavelengths. The difference
     between multi and hyper-spectral lays on the number of bands (tens
     vs. hundreds) and how narrow the bandwidths are. Our multi-spectral
-    image has 4 bands; red, green, blue, and near-infrared (*NIR*) and
-    can be found in `./Data/ms` in this repository:
+    image has 4 bands; red, green, blue, and near-infrared (*NIR*) and a
+    resolution of $30 \times 30 m^2$ resolution. The image can be found
+    in `./Data/ms` in this repository:
 
-    ```{r, eval=FALSE}
-    ms.img <- raster("/Data/pan/pan_example.tif")
+    ```{r}
+    ms.img <- stack("./Data/ms_example.tif")
     ms.img
-    plot(pan.img)
+    plotRGB(ms.img, stretch = "lin")
     ```
 
 *PAN* and *MS* images were captured by
-[Landsat-8,](https://es.wikipedia.org/wiki/Landsat_8) on July 1st 2019
+[Landsat-8,](https://es.wikipedia.org/wiki/Landsat_8) on June 30st 2015
 and belong to the [Collection
 1](https://www.usgs.gov/core-science-systems/nli/landsat/landsat-collection-1?qt-science_support_page_related_con=1#qt-science_support_page_related_con),
-processing level 1 ().
+Level 1.
 
 ## Overview
 
@@ -130,7 +132,12 @@ same platform (Wegmann et al., 2016).
 
 The classical approach deals only with the Red-Green-Blue spectral bands
 (Wegmann et al., 2016). It preserves the color balance relatively well
-(Wegmann et al., 2016)
+(Wegmann et al., 2016).
+
+```{r, eval=FALSE}
+ihs.img <- panSharpen(ms.img, pan.img, r = 1, g = 2, b = 3, method = "ihs", norm = TRUE)
+plotRGB(ihs.img, stretch= "lin")
+```
 
 ### The Principal Component Analysis
 
