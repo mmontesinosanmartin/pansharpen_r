@@ -12,41 +12,56 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Tutorial: Pansharpening
+# Tutorial: Pansharpening from R
 
-The amount of techniques to process satellite imagery can be
+------------------------------------------------------------------------
+
+The amount of techniques for processing satellite imagery can be
 overwhelming. This tutorial is an attempt to summarize and organize some
-of these techniques. Here, we focus on techniques available in `R`
-(either native or through third-party software, such as
+of these techniques, with a special focus on those available in `R`
+(either native or via third-party software, e. g.
 [SAGA](http://www.saga-gis.org/en/index.html) or
-[GRASS](https://grass.osgeo.org/)). Other methods are also described,
-just enough to provide further context and be aware about the pros and
-cons of using `R` as a tool to pre-process satellite images.
+[GRASS](https://grass.osgeo.org/)). Other methods not available in `R`
+are also described, but just enough to provide a greater context and be
+aware about the strengths and limitations using `R` as a tool for
+pre-processing.
+
+------------------------------------------------------------------------
 
 ## Intro
 
-This topic of this tutorial is **pansharpening** , a group of techniques
-to increase the spatial and spectral resolution of satellite images by
-fusing images with complementary features. The tutorial gives:
-
--   An introduction to the basics of pansharpening (Section 1)
-
--   An overview of methods (Section 2)
-
--   Descriptions of some methods (Section 3), including:
-
-    -   Brief theoretical explanations
-    -   Simple and reproducible examples
-
-Minimum requirement to follow this tutorial: install
+The topic of this tutorial is **pansharpening** , a group of techniques
+that increase the spatial and spectral resolution of satellite images by
+fusing images with complementary features. The tutorial gives: An
+introduction to the basics of pansharpening ([Section
+1](##The%20basics)), an overview of methods ([Section 2](##Overview)),
+and descriptions of some methods ([Section
+3](##Methods:%20Component%20Substitution)), including a brief
+theoretical explanations and simple and reproducible examples. To follow
+this tutorial: install
 [`RStoolbox`](http://bleutner.github.io/RStoolbox/)(Leutner et al.,
-2019) to pansharpen and `tmap` (Tennekes, 2018) to visualize the
-results:
+2019) to pansharpen and
+[`tmap`](https://github.com/mtennekes/tmap)(Tennekes, 2018) to visualize
+the results:
 
 ```{r, eval=FALSE}
 install.packages("RStoolbox")
 install.packages("tmap")
 ```
+
+For convenience, we built the `compare_vis()` function for this
+tutorial. The function has two inputs, the original and the pansharpened
+multi-spectral images. The function is a wrapper of `tmap` instructions
+that will display both side-by-side as RGB in interactive maps. The
+function is available in [this
+repository](https://github.com/mmontesinosanmartin/pansharpen_r), and
+can be loaded into `R` as follows:
+
+```{r compare_vis}
+source("./R/compare_vis.R")
+```
+
+------------------------------------------------------------------------
 
 ## The basics
 
@@ -65,9 +80,9 @@ Pansharpening methods generally fuse a **panchromatic** and a
 
     ```{r}
     library(raster)
-    pan.img <- raster("./Data/pan_example.tif")
+    ms.file <- "./Data/pan_example.tif"
+    pan.img <- raster(ms.file)
     pan.img
-    plot(pan.img, col = grey.colors(10))
     ```
 
 -   **Multi(hyper)-spectral** (*MS*) images carry information about the
@@ -81,14 +96,31 @@ Pansharpening methods generally fuse a **panchromatic** and a
     ```{r}
     ms.img <- stack("./Data/ms_example.tif")
     ms.img
-    plotRGB(ms.img, stretch = "lin")
     ```
 
 *PAN* and *MS* images were captured by
 [Landsat-8,](https://es.wikipedia.org/wiki/Landsat_8) on June 30st 2015
 and belong to the [Collection
 1](https://www.usgs.gov/core-science-systems/nli/landsat/landsat-collection-1?qt-science_support_page_related_con=1#qt-science_support_page_related_con),
-Level 1.
+Level 1. Before starting, it is recommended that *PAN* and *MS* are
+**co-registered** , i.e. the properly aligned, even when if they belong
+to the same platform (Wegmann et al., 2016). The function
+`coregisterImages()` from `RStoolbox` applies an automated
+co-registration algorithm. It shifts a *slave* image vertically and
+horizontally over a *reference* image to find which maximizes the
+[mutual information](https://en.wikipedia.org/wiki/Mutual_information).
+This function demands both *master* and *slave* to have the same number
+of bands and it is conceived to co-register several multi-spectral
+images. Here we run an informal test with a single band from *MS* and
+the *PAN,* to rapidly check that *PAN* and *MS* are aligned.
+
+```{r}
+# shift from -10 to +10 pixels horizontally and vertically
+img.shift <- coregisterImages(ms.img[[1]],pan.img,shift=10,reportStats=TRUE)
+img.shift$bestShift
+```
+
+------------------------------------------------------------------------
 
 ## Overview
 
@@ -100,9 +132,9 @@ al., 2015):
     disentangles the spatial structure from the spectral information.
     The component representing the spatial structure is replaced by the
     *PAN* image. Finally, the image is projected back to the original
-    vector space. Among the *CS* techniques, some of the most popular
-    are the *Intensity-Hue-Saturation* method (*IHS*), the *Principal
-    Component Analysis* (*PCA*), and the *Gram-Schmidt* spectral
+    vector space. Among the most popular *CS* techniques are the
+    *Intensity-Hue-Saturation* method (*IHS*), the *Principal Component
+    Analysis* (*PCA*), and the *Gram-Schmidt* (*GS*) spectral
     sharpening.
 
 -   **Multi-Resolution Analyses** (*MRA*): This group of methods extract
@@ -113,43 +145,166 @@ al., 2015):
     *Undecimated Wavelet Transform* (*UDWT*), *A-Trous Wavelet
     Transform* (*ATW*), and the *Laplacian Pyramid* (*LP*).
 
-A third group combines both *CS* and *MRA*, and hence they are called
-*hybrid*. Current software in `R` covers some *CS* methods. They provide
-a high geometrical quality and they are simple and computationally fast.
-However, they do not consider potential discrepancies between the *PAN*
-and the *MS* image, leading to spectral distortions in some
-circumstances. They should be used with care (or avoided) for the
-analysis of spectral signatures (Alparone et al., 2015; Wegmann et al.,
-2016).
+A third group combines both *CS* and *MRA*, and thus they are called
+*hybrid*. Current software in (or linked to) `R` covers some *CS*
+methods. They provide a high geometrical quality and they are simple and
+computationally fast. However, they do not consider potential
+discrepancies between the *PAN* and the *MS* image, leading, in some
+circumstances, to spectral distortions. They should be used with care
+(or avoided) for the analysis of spectral signatures (Alparone et al.,
+2015; Wegmann et al., 2016).
 
-## Methods
+------------------------------------------------------------------------
 
-To avoid blurred results, it is a good practice to ensure the proper
-corregistration between *PAN* and *MS*, even when collected from the
-same platform (Wegmann et al., 2016).
+## Methods: Component Substitution
 
-### The Intensity-Hue-Saturation method (IHS)
+Mains steps in *CS* sharpening are: (1) interpolate the *MS* image to
+match the scale of the *PAN* image, (2) define and apply spectral
+weights to each band to obtain the *intensity image* (i.e., an image
+representing the darkness-lightness of colors), (3) match the histograms
+of the *PAN* and the intensity image, so they show similar frequencies
+for each intensity value, (4) calculate and sum the *injection gains* to
+the original image (i.e. the proportional part that goes to each band of
+the original image). Variations of *CS* differ in the definition of the
+spectral weights in step 2 and the calculation of the injection gains in
+step 4.
 
-The classical approach deals only with the Red-Green-Blue spectral bands
-(Wegmann et al., 2016). It preserves the color balance relatively well
-(Wegmann et al., 2016).
+The `RStoolbox` package implements three variants of the *CS* (Leutner
+et al., 2019) with the `panSharpen()` function; the **Brovey Transform
+(BT), the Intensity-Hue-Saturation (IHS), and the Principal Component
+Analysis (PCA)**. Another alternative is using the image processing
+module from *SAGA* , which additionally includes the Spectral
+Sharpening. We will check how *SAGA* may boost the computational
+performance of pansharpening when dealing with large images. Due to the
+need of third-party software and the methodological overlap between
+`RStoolbox` and *SAGA*, we relegate its use to the end of this tutorial.
 
-```{r, eval=FALSE}
-ihs.img <- panSharpen(ms.img, pan.img, r = 1, g = 2, b = 3, method = "ihs", norm = TRUE)
-plotRGB(ihs.img, stretch= "lin")
+### Brovey Transform (BT)
+
+BT (Gillespie et al., 1987) is one of the simplest pansharpening
+techniques. BT applies ratios between the bands of the *MS* and the
+*PAN* to obtain the sharpened image. More specifically, `panSharpen()`
+first interpolates the *MS* image ($\tilde{MS}$) to match the resolution
+of the *PAN* image using nearest neighbors, then calculates the
+intensity image as the mean of all bands
+($I = \frac{1}{N} \sum_{k = 1}^{N}{MS_k}$), and finally *injects* the
+details to the original image by multiplying ratio between the *PAN* and
+intensity image:
+
+$MS_{PAN,k}=\tilde{MS,k}\dot\frac{PAN}{I}$
+
+The Brovey transform can be applied setting the argument
+`method = "brovey"`. BT only deals with the Red-Green-Blue (*RGB*)
+bands, so we must specify which layer in the *MS* image corresponds to
+*R*, *G*, and *B*. The red, green, and blue bands in `ms.img` are the
+1st, 2nd, and 3rd layers respectively. Thus, we run:
+
+```{r bro_sharpen}
+library("RStoolbox")
+bro.img <- panSharpen(ms.img, pan.img,r=1,g=2,b=3,method="brovey")
 ```
 
-### The Principal Component Analysis
+We can visually compare the original and the sharpened image with the
+function `compare_vis()` :
 
-Can lead to severe color distortions (Wegmann et al., 2016) but shows
-good capabilities in reproducing sharp edges and can deal with more than
-three bands (Wegmann et al., 2016).
+```{r bro_vis}
+compare_vis(ms.img, bro.img)
+```
+
+### Intensity-Hue-Saturation (IHS)
+
+IHS (Carper et al., 1990) begins with transformation of the interpolated
+RGB image ($\tilde{MS}$) into the [Intensity-Hue-Saturation color
+space](https://en.wikipedia.org/wiki/HSL_and_HSV), which is a model of
+visual perception of colors. With this decomposition we extract the
+intensity image as a linear combination of the *RGB* bands (generally
+expressed as $I=\sum_{i=0}^{N}w_i\tilde{MS_i}$). The histograms from the
+intensity and the *PAN* image are matched. Then, the *PAN* replaces the
+intensity band, and the IHS images is transformed back to
+Red-Green-Blue. In addition to
+
+```{r ihs_sharpen}
+ihs.img <- panSharpen(ms.img, pan.img,r=1,g=2,b=3,method="ihs")
+```
+
+Let's display the original and the pansharpened image:
+
+```{r ihs_vis}
+compare_vis(ihs.img, ms.img = ms.img, titles = c("IHS", "Original"))
+```
+
+Note that the classical approach only deals with the Red-Green-Blue
+spectral bands (Wegmann et al., 2016). It preserves the color balance
+relatively well (Wegmann et al., 2016).
+
+### Principal Component Analysis (PCA)
+
+*PCA* transforms the spectral bands such that they are projected onto
+new axes, called *Principal Components*, which are statistically
+uncorrelated with each other. The components are generally sorted with
+decreasing variance and the frequent assumption is that the 1st
+component (*PC1*) is the one that spectrally matches the *PAN*. The
+weights to compute the intensity image (step 2) and injection gains
+(step 4) are derived from the *PCA*.
+
+```{r rstoolbox_pca}
+pca.img <- panSharpen(ms.img, pan.img,method="pca")
+```
+
+Let's have a look at the results:
+
+```{r pca_vis}
+compare_vis(pca.img, ms.img = ms.img, titles = c("PCA", "Original"))
+```
+
+The strengths of the *PCA* are the high fidelity reproducing sharp edges
+and and the ability to deal with more than three bands. The weakness is
+that it can lead to severe color distortions (Wegmann et al., 2016), as
+shown in this case. The success of the fusion will depend on which
+extent the assumption $PC1 \sim PAN$ is fulfilled (Alparone et al.,
+2015).
+
+As a final result, we display all the images together:
+
+```{r all_vis}
+compare_vis(bro.img, ihs.img, pca.img, ms.img, titles = c("BT", "IHS", "PCA", "Original"), lyout = c(1,4))
+```
+
+------------------------------------------------------------------------
+
+## Additional caveats
+
+Use the function `pansharpen_pca()` from this repository apply the
+corresponding module in *SAGA.* It is used as follows:
+
+```{r saha_pca}
+source("./R/pansharpen_pca.R")
+saga.path <- normalizePath("C:\\OSGeo4W64\\apps\\saga-ltr\\saga_cmd.exe")
+mark(pca.saga <- pansharpen_pca(saga.path, ms.img, pan.img))
+```
+
+The computational time implemented in native `R` takes around $8.5$ sec.
+while the implementation is *SAGA* takes $18$ sec.
 
 ## Refrences
 
 Alparone, L., Aiazzi, B., Baronti, S., & Garzelli, A. (2015).
 Pansharpening of Multispectral Images, in Remote Sensing Image Fusion.
 *Crc Press*.
+
+Carper W., Lillesand T., and Kiefer , R. (1990). The use of
+intensity-hue-saturation transformations for merging SPOT panchromatic
+and multispectral image data. *Photogrammetric Engineering and Remote
+Sensing*, **56**(4):459--467.
+
+Gillespie, A. R., Kahle, A. B., & Walker, R. E. (1987). Color
+enhancement of highly correlated images. II. Channel ratio and
+"chromaticity" transformation techniques. *Remote Sensing of
+Environment*, **22**(3), 343-365. (URL:
+[https://doi.org/10.1016/0034-4257(87)90088-5](https://doi.org/10.1016/0034-4257(87)90088-5 "Persistent link using digital object identifier"))
+
+Hester J. (2020). `bench`: High Precision Timing of R Expressions. R
+package version 1.1.1. <https://CRAN.R-project.org/package=bench>
 
 Leutner B., Horning N., & Schwalb-Willmann, J. (2019). `RStoolbox`:
 *Tools for Remote Sensing Data Analysis*. R package version 0.2.6.
