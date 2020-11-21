@@ -20,11 +20,10 @@ The amount of techniques for processing satellite imagery can be
 overwhelming. This tutorial is an attempt to summarize and organize some
 of these techniques, with a special focus on those available in `R`
 (either native or via third-party software, e. g.
-[SAGA](http://www.saga-gis.org/en/index.html) or
-[GRASS](https://grass.osgeo.org/)). Other methods not available in `R`
-are also described, but just enough to provide a greater context and be
-aware about the strengths and limitations using `R` as a tool for
-pre-processing.
+[SAGA](http://www.saga-gis.org/en/index.html)). Other methods not
+available in `R` are also described, but just enough to provide a
+greater context and be aware about the strengths and limitations using
+`R` as a tool for pre-processing.
 
 ------------------------------------------------------------------------
 
@@ -38,22 +37,31 @@ introduction to the basics of pansharpening ([Section
 and descriptions of some methods ([Section
 3](##Methods:%20Component%20Substitution)), including a brief
 theoretical explanations and simple and reproducible examples. To follow
-this tutorial: install
+this tutorial, install
 [`RStoolbox`](http://bleutner.github.io/RStoolbox/)(Leutner et al.,
-2019) to pansharpen and
-[`tmap`](https://github.com/mtennekes/tmap)(Tennekes, 2018) to visualize
-the results:
+2019), [`tmap`](https://github.com/mtennekes/tmap) (Tennekes, 2018) and
+[`raster`](https://rspatial.org/raster/) (Hijamns 2020), if you don't
+have them already:
 
 ```{r, eval=FALSE}
+install.packages("raster")
 install.packages("RStoolbox")
 install.packages("tmap")
 ```
 
+To load them:
+
+```{r packages}
+library("raster")
+library("RStoolbox")
+library("tmap")
+```
+
 For convenience, we built the `compare_vis()` function for this
 tutorial. The function has two inputs, the original and the pansharpened
-multi-spectral images. The function is a wrapper of `tmap` instructions
-that will display both side-by-side as RGB in interactive maps. The
-function is available in [this
+multi-spectral images. The function is a wrapper of `tmap` and will
+display side-by-side interactive maps of RGB images. The function is
+available in [this
 repository](https://github.com/mmontesinosanmartin/pansharpen_r), and
 can be loaded into `R` as follows:
 
@@ -76,11 +84,11 @@ Pansharpening methods generally fuse a **panchromatic** and a
     finer spatial details. This also means that panchromatic images have
     a single band and they do not distinguish intensities from discrete
     wavelengths. In this tutorial, we use the *PAN* image under the path
-    `./Data/pan` , with a resolution of $15 \times 15m^2$ resolution.
+    `./Data/small_sample`, with a resolution of $15 \times 15m^2$
+    resolution:
 
     ```{r}
-    library(raster)
-    ms.file <- "./Data/pan_example.tif"
+    ms.file <- "./Data/small_sample/pan_example.tif"
     pan.img <- raster(ms.file)
     pan.img
     ```
@@ -89,36 +97,40 @@ Pansharpening methods generally fuse a **panchromatic** and a
     radiance/reflectance from narrower wavelengths. The difference
     between multi and hyper-spectral lays on the number of bands (tens
     vs. hundreds) and how narrow the bandwidths are. Our multi-spectral
-    image has 4 bands; red, green, blue, and near-infrared (*NIR*) and a
-    resolution of $30 \times 30 m^2$ resolution. The image can be found
-    in `./Data/ms` in this repository:
+    image has 4 bands; red, green, blue, and near-infrared (*NIR*). The
+    image can be found under `./Data/small_sample` and has a resolution
+    of $30 \times 30m^2$ :
 
     ```{r}
-    ms.img <- stack("./Data/ms_example.tif")
+    ms.img <- stack("./Data/small_sample/ms_example.tif")
     ms.img
     ```
 
 *PAN* and *MS* images were captured by
-[Landsat-8,](https://es.wikipedia.org/wiki/Landsat_8) on June 30st 2015
-and belong to the [Collection
+[Landsat-8,](https://es.wikipedia.org/wiki/Landsat_8) on June 30st 2015.
+They both belong to the [Collection
 1](https://www.usgs.gov/core-science-systems/nli/landsat/landsat-collection-1?qt-science_support_page_related_con=1#qt-science_support_page_related_con),
-Level 1. Before starting, it is recommended that *PAN* and *MS* are
-**co-registered** , i.e. the properly aligned, even when if they belong
-to the same platform (Wegmann et al., 2016). The function
-`coregisterImages()` from `RStoolbox` applies an automated
-co-registration algorithm. It shifts a *slave* image vertically and
-horizontally over a *reference* image to find which maximizes the
-[mutual information](https://en.wikipedia.org/wiki/Mutual_information).
-This function demands both *master* and *slave* to have the same number
-of bands and it is conceived to co-register several multi-spectral
-images. Here we run an informal test with a single band from *MS* and
-the *PAN,* to rapidly check that *PAN* and *MS* are aligned.
+and processing Level 1. Before pansharpening, the literature recommends
+the **co-registration** of the *PAN* and *MS* so they are properly
+aligned. This is true even when if they belong to the same platform
+(Wegmann et al., 2016). The function `coregisterImages()` from
+`RStoolbox` applies an automated co-registration algorithm. It shifts a
+*slave* image along the vertical and horizontal axes over a *reference*
+image to maximize the [mutual
+information](https://en.wikipedia.org/wiki/Mutual_information). This
+function demands both *master* and *slave* to have the same number of
+bands. It wasn't conceived to co-register *MS* and *PAN* images. Here we
+run an informal test with a single band from *MS* and the *PAN,* to
+illustrate the application of this function:
 
 ```{r}
 # shift from -10 to +10 pixels horizontally and vertically
 img.shift <- coregisterImages(ms.img[[1]],pan.img,shift=10,reportStats=TRUE)
 img.shift$bestShift
 ```
+
+As the best shift is $0,0$, we interprete that *PAN* and *MS* images are
+well aligned along both axes.
 
 ------------------------------------------------------------------------
 
@@ -239,13 +251,13 @@ relatively well (Wegmann et al., 2016).
 
 ### Principal Component Analysis (PCA)
 
-*PCA* transforms the spectral bands such that they are projected onto
-new axes, called *Principal Components*, which are statistically
-uncorrelated with each other. The components are generally sorted with
-decreasing variance and the frequent assumption is that the 1st
-component (*PC1*) is the one that spectrally matches the *PAN*. The
-weights to compute the intensity image (step 2) and injection gains
-(step 4) are derived from the *PCA*.
+*PCA* (Licciardi et al., 2012) transforms the spectral bands such that
+they are projected onto new axes, called *Principal Components*, which
+are statistically uncorrelated with each other. The components are
+generally sorted with decreasing variance and the frequent assumption is
+that the 1st component (*PC1*) is the one that spectrally matches the
+*PAN*. The weights to compute the intensity image (step 2) and injection
+gains (step 4) are derived from the *PCA*.
 
 ```{r rstoolbox_pca}
 pca.img <- panSharpen(ms.img, pan.img,method="pca")
@@ -272,25 +284,100 @@ compare_vis(bro.img, ihs.img, pca.img, ms.img, titles = c("BT", "IHS", "PCA", "O
 
 ------------------------------------------------------------------------
 
-## Additional caveats
+## Bonus: Large images
 
-Use the function `pansharpen_pca()` from this repository apply the
-corresponding module in *SAGA.* It is used as follows:
+The multi-spectral images from above are purposely small
+($310 \times400$ pixels). `R` can be slow when dealing with large
+images. To illustrate the issue, we repeat the analysis with larger
+*PAN* and *MS* images ($1579 \times 1882$ pixels for the *MS* image).
+Both images are saved in the `./Data/large_sample` directory. Load them
+in `R` as follows:
 
-```{r saha_pca}
-source("./R/pansharpen_pca.R")
-saga.path <- normalizePath("C:\\OSGeo4W64\\apps\\saga-ltr\\saga_cmd.exe")
-mark(pca.saga <- pansharpen_pca(saga.path, ms.img, pan.img))
+```{r img_large}
+ms.lrg <- stack("./Data/large_sample/ms_large_example.tif")
+pn.lrg <- raster("./Data/large_sample/pan_large_example.tif")
 ```
 
-The computational time implemented in native `R` takes around $8.5$ sec.
-while the implementation is *SAGA* takes $18$ sec.
+The function `mark()` from the `bench` package () tracks the running
+times in `R` . The argument `time_unit = "m"` ensures consistent time
+units (here minutes) across tests. We run the three pansharpening
+techniques from above using the large images. Please, be patient as next
+lines may take a few minutes)
 
-## Refrences
+```{r rstlbx_test}
+bro.rstl <- mark(
+  panSharpen(ms.lrg, pn.lrg,r=1,g=2,b=3,method="brovey"),
+  time_unit = "m")
+bro.rstl$min
+ihs.rstl <- mark(
+  panSharpen(ms.lrg, pn.lrg,r=1,g=2,b=3,method="ihs"),
+  time_unit = "m")
+ihs.rstl$min
+pca.rstl <- mark(
+  panSharpen(ms.lrg, pn.lrg, method="pca"),
+  time_unit = "m")
+pca.rstl$min
+```
+
+The code takes $1.89$, $1.37$, and $1.85$ minutes to pansharpen the
+large *MS* image using an Intel(R) Core(TM) i7-4710HQ CPU at 2.50 GHz.
+Under similar (or worse) circumstances, it might be worthwhile to
+consider external libraries such as [SAGA](http://www.saga-gis.org/).
+This GIS software provides pansharpening techniques within the module
+called [imagery
+tools](http://www.saga-gis.org/saga_tool_doc/2.2.1/imagery_tools.html).
+SAGA offers compiled code, which is significantly faster than `R`.
+Before continuing with this tutorial, make sure SAGA is
+[installed](https://sourceforge.net/projects/saga-gis/files/). Once
+installed, find the *saga_cmd.exe* file and paste the path in the
+following command. For me:
+
+```{r saga_path}
+saga.path <- normalizePath("C:\\OSGeo4W64\\apps\\saga-ltr\\saga_cmd.exe")
+```
+
+[The github
+repository](https://github.com/mmontesinosanmartin/pansharpen_r)
+provides custom functions to interact with the pansharpening libraries
+in SAGA. The functions are inside the `./R` folder and there is one
+function for each pansharpening technique; the *Brovey, IHS*, and *PCA*
+methods:
+
+```{r saga_wrappers}
+source("./R/pansharpen_brovey.R")
+source("./R/pansharpen_ihs.R")
+source("./R/pansharpen_pca.R")
+```
+
+Then, the same analysis can be performed with SAGA as follows:
+
+```{r saga_test}
+bro.saga <- mark(pansharpen_brovey(saga.path, ms.lrg, pan.lrg), time_unit = "m")
+ihs.saga <- mark(pansharpen_ihs(saga.path, ms.lrg, pan.lrg), time_unit = "m")
+pca.saga <- mark(pansharpen_pca(saga.path, ms.lrg, pan.lrg), time_unit = "m")
+```
+
+Each of the pansharpening techniques takes $0.48$, $0.50$, and $0.7$
+minutes, which saves around $25-50\%$ of the time relative to
+`RStoolbox`. Note that there is still room for improvement in the custom
+functions to achieve better computational efficiency. You may also
+consider using specialized packages, such as `RSAGA`(Brenning, 2018), to
+achieve better communications between `R` and SAGA. Also, using SAGA
+from `R` does not always means a faster implementation. With small
+images, the cost of calling SAGA is greater than the savings from
+compiled code and native `R` might be preferred.
+
+------------------------------------------------------------------------
+
+## References
 
 Alparone, L., Aiazzi, B., Baronti, S., & Garzelli, A. (2015).
 Pansharpening of Multispectral Images, in Remote Sensing Image Fusion.
 *Crc Press*.
+
+Brenning A., Bangs D., and Becker M. (2018). RSAGA: SAGA Geoprocessing
+and Terrain Analysis. R package version 1.3.0. (URL:
+<https://CRAN.R-project.org/package=RSAGA>)
 
 Carper W., Lillesand T., and Kiefer , R. (1990). The use of
 intensity-hue-saturation transformations for merging SPOT panchromatic
@@ -304,11 +391,22 @@ Environment*, **22**(3), 343-365. (URL:
 [https://doi.org/10.1016/0034-4257(87)90088-5](https://doi.org/10.1016/0034-4257(87)90088-5 "Persistent link using digital object identifier"))
 
 Hester J. (2020). `bench`: High Precision Timing of R Expressions. R
-package version 1.1.1. <https://CRAN.R-project.org/package=bench>
+package version 1.1.1. (URL: <https://CRAN.R-project.org/package=bench>)
+
+Hijmans R. (2020). `raster`: Geographic Data Analysis and Modeling. R
+package version 3.3-13. (URL:
+<https://CRAN.R-project.org/package=raster>)
 
 Leutner B., Horning N., & Schwalb-Willmann, J. (2019). `RStoolbox`:
-*Tools for Remote Sensing Data Analysis*. R package version 0.2.6.
-<https://CRAN.R-project.org/package=RStoolbox>
+*Tools for Remote Sensing Data Analysis*. R package version 0.2.6. (URL:
+<https://CRAN.R-project.org/package=RStoolbox>)
+
+Licciardi, G. A., Khan, M. M., Chanussot, J., Montanvert, A., Condat,
+L., & Jutten, C. (2012). Fusion of hyperspectral and panchromatic images
+using multiresolution analysis and nonlinear PCA band reduction.
+*EURASIP Journal on Advances in Signal processing*, **2012**(1), 1-17.
+(URL:
+[[https://doi.org/](https://doi.org/10.1016/0034-4257(87)90088-5)10.1109/IGARSS.2011.6049466](https://doi.org/10.1016/0034-4257(87)90088-5 "Persistent link using digital object identifier"))
 
 Tennekes, M. (2018). `tmap`: Thematic Maps in R. *Journal of Statistical
 Software* **84** (6), 1-39. (URL:

@@ -16,7 +16,7 @@ pansharpen_pca <- function(saga.path,
   writeRaster(ms.img, tmp.ms, bylayer = TRUE, overwrite = TRUE)
   writeRaster(pan.img, tmp.pan, bylayer = TRUE, overwrite = TRUE)
   ms.in <- list.files(tmp.dir, pattern = "ms.*.sgrd", full.names = TRUE)
-  pan.in <- list.files(tmp.dir, pattern = "pan.sgrd", full.names = TRUE)
+  pan.in <- list.files(tmp.dir, pattern = "pan.*.sgrd", full.names = TRUE)
   
   # parameters
   method <- switch(
@@ -43,7 +43,7 @@ pansharpen_pca <- function(saga.path,
   # run seeding
   system(paste0(
     saga.path,
-    ' -f= ',  'imagery_tools 7 ',
+    ' -f= ',  ' imagery_tools 7 ',
     ' -GRIDS ', paste(ms.in, collapse = ";"),
     ' -PAN ', pan.in,
     ' -SHARPEN ', paste(out.tmp, collapse = ";"),
