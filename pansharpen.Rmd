@@ -1,5 +1,10 @@
 ---
 title: "Pansharpening satellite images from R"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Manuel Montesino-SanMartin"
 date: "09/11/2020"
 output: html_document
@@ -10,6 +15,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 # Tutorial: Pansharpening from R
