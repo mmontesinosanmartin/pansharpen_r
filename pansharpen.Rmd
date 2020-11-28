@@ -220,7 +220,7 @@ We can visually compare the original and the sharpened image with the
 function `compare_vis()` :
 
 ```{r bro_vis}
-compare_vis(ms.img, bro.img)
+compare_vis(bro.img, ms.img, titles = c("Brovey", "Original"))
 ```
 
 ### Intensity-Hue-Saturation (IHS)
@@ -298,13 +298,14 @@ ms.lrg <- stack("./Data/large_sample/ms_large_example.tif")
 pn.lrg <- raster("./Data/large_sample/pan_large_example.tif")
 ```
 
-The function `mark()` from the `bench` package () tracks the running
-times in `R` . The argument `time_unit = "m"` ensures consistent time
-units (here minutes) across tests. We run the three pansharpening
+The function `mark()` from the `bench` package (Hester, 2020) tracks the
+running times in `R` . The argument `time_unit = "m"` ensures consistent
+time units (here minutes) across tests. We run the three pansharpening
 techniques from above using the large images. Please, be patient as next
 lines may take a few minutes)
 
 ```{r rstlbx_test}
+library(bench)
 bro.rstl <- mark(
   panSharpen(ms.lrg, pn.lrg,r=1,g=2,b=3,method="brovey"),
   time_unit = "m")
@@ -352,9 +353,9 @@ source("./R/pansharpen_pca.R")
 Then, the same analysis can be performed with SAGA as follows:
 
 ```{r saga_test}
-bro.saga <- mark(pansharpen_brovey(saga.path, ms.lrg, pan.lrg), time_unit = "m")
-ihs.saga <- mark(pansharpen_ihs(saga.path, ms.lrg, pan.lrg), time_unit = "m")
-pca.saga <- mark(pansharpen_pca(saga.path, ms.lrg, pan.lrg), time_unit = "m")
+bro.saga <- mark(pansharpen_brovey(saga.path, ms.lrg, pn.lrg), time_unit = "m")
+ihs.saga <- mark(pansharpen_ihs(saga.path, ms.lrg, pn.lrg), time_unit = "m")
+pca.saga <- mark(pansharpen_pca(saga.path, ms.lrg, pn.lrg), time_unit = "m")
 ```
 
 Each of the pansharpening techniques takes $0.48$, $0.50$, and $0.7$
