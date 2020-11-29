@@ -35,9 +35,10 @@ compare_vis <- function(...,
   )
   
   # Map
-  tmap_arrange(maps,
+  out <- tmap_arrange(maps,
                nrow=lyout[1], 
                ncol=lyout[2], 
                sync = TRUE)
+  return(out)
 }
 
