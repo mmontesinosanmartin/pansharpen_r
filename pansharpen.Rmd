@@ -1,5 +1,5 @@
 ---
-title: "Pansharpening satellite images from R"
+title: "Pansharpening satellite images in R"
 author: "Montesino-SanMartin, Manuel"
 output: 
   html_document:
@@ -184,12 +184,6 @@ compare_vis(pca.img, ms.img = ms.img, titles = c("PCA", "Original"))
 ```
 
 The strengths of the *PCA* are the high fidelity reproducing sharp edges and and the ability to deal with more than three bands. The weakness is that it can lead to severe color distortions (Wegmann et al., 2016). The distortion is evident in the lake located on the bottom-right corner of the image. It must be considered that the success of the fusion depends on which extent the assumption regarding $PC1 \sim PAN$ is fulfilled (Alparone et al., 2015).
-
-As a final result, we display all the images together:
-
-```{r all_vis, message=FALSE}
-compare_vis(bro.img, ihs.img, pca.img, ms.img, titles = c("BT", "IHS", "PCA", "Original"), lyout = c(1,4))
-```
 
 ------------------------------------------------------------------------
 
